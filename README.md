@@ -1,5 +1,5 @@
-# modern9
-modern9是一个安全，易用，现代，高性能的密码学组件库
+# modern99
+modern99是一个安全，易用，现代，高性能的密码学组件库
 
 鉴于：
 
@@ -13,7 +13,7 @@ modern9是一个安全，易用，现代，高性能的密码学组件库
 所以我们需要一个90分的crypto组件库，做到安全，易用，现代，高性能，封装现代密码学的best practice，提升实际项目中密码学的应用水平
 
 
-modern9分为2部分：
+modern99分为2部分：
 1. 高层filter, box组件，您所遇到的开发问题，90%都已经被这些组件解决，并且内置best practice，请直接使用
 2. 底层密码学算法，如果filter,box不能满足您，请尝试底层原语，底层原语有大量高度危险的细节，请认真阅读注释/文档
 
@@ -25,7 +25,7 @@ filter,box，作为一个黑盒来用就行，
 
 ##### 1.  对称传输filter（提供保密+完整性+压缩，保证高性能），
 
-iSymmetricFilter.h
+SymmetricFilter.h
 
 zlib+aes-128-gcm
 
@@ -35,14 +35,14 @@ zlib+chacha20-poly1305
 
 ##### 2.  认证密钥协商，提供PFS保证
 
-iKeyExchageFilter.h
+KeyExchageFilter.h
 ECDSA + ECDH，
 rsa-2048
 ED25519 + Curve25519
 
-##### 3.  混合加密box，电子信封，(没有PFS保证)
+##### 3.  混合加密box，电子信封，有对方的公钥加密，只有对方才能看到明文(没有PFS保证)
 
-iDigitalEnvelope.h
+DigitalEnvelope.h
 rsa-2048 + aes-gcm-128 + hmac-sha256 混合加密，encrypt then MAC
 rsa-2048 + aes-cbc-128 + hmac-sha256 混合加密, encrypt then MAC
 ECDH-P256 + chacha20 + poly1305 混合加密，encrypt then MAC
@@ -51,45 +51,50 @@ Curve25519 + chacha20 + poly1305 混合加密，encrypt then MAC
 
 ##### 4.  TLS封装，提供TLS best practice
 
-iTLSFilter.h
+TLSFilter.h
 
 利用 BIO\_s\_mem 来做tls异步编程： 
 <http://funcptr.net/2012/04/08/openssl-as-a-filter-(or-non-blocking-openssl)/>
       
+##### 5. 保险箱box，用一个密码存储，用一个密码打开，编辑
+
+StoreBox.h
+scrypt + aes-128-gcm
 
 ### 2. 底层密码学算法
 
-iSymmetricCipher.h
+SymmetricCipher.h
     aes-gcm-128
     aes-cbc-128
     chacha20-poly1305
 
-iMAC.h
+MAC.h
     hmac-sha256
     hmac-sha512
 
-iDigitalSignature.h
+DigitalSignature.h
     RSA sign/verify
     ECDSA sign/verify
     ED25519 sign/verify
 
-iKeyExchange.h
+KeyExchange.h
     RSA encrypt/decrypt
     ECDH
     Curve25519
 
-iPasswordHash.h
+PasswordHash.h
     bcrypt
     pbkdf2
     scrypt
+    PRF_sha256
 
-iHash.h
+Hash.h
     sha256
     sha512
     sha1/md5
     siphash
 
-iCryptoUtil.h
+CryptoUtil.h
     init()
     mem_cmp_constant_time()
     random
@@ -97,9 +102,9 @@ iCryptoUtil.h
 
 ### 4.internal
 
-modern9内部选择封装了openssl里部分安全，现代，高性能的算法，并没有自己实现
+modern99内部选择封装了openssl里部分安全，现代，高性能的算法，并没有自己实现
 
-modern9算法的选择参考了 libsodium，Botan，cryptopp, QUIC protocol
+modern99算法的选择参考了 libsodium，Botan，cryptopp, QUIC protocol
 <http://doc.libsodium.org/index.html>
 
-
+<http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/what-is-a-digital-envelope.htm>
