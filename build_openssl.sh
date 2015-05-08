@@ -49,6 +49,7 @@
 function build(){
 
 wget -c https://www.openssl.org/source/$PKG.tar.gz
+wget -c https://raw.githubusercontent.com/cloudflare/sslconfig/master/patches/openssl__chacha20_poly1305_cf.patch
 
 #校验一下sha1sum
 RIGHT_SHA1=$(curl -k https://www.openssl.org/source/$PKG.tar.gz.sha1)
@@ -66,14 +67,15 @@ mkdir -p $PKG
 tar xf $PKG.tar.gz
 cd $PKG
 
+patch -p1 < ../openssl__chacha20_poly1305_cf.patch
 
 make dclean
 
 ./Configure                 \
     --prefix=$PREFIX        \
     $ARCH                   \
-    no-shared               \
     threads                 \
+    shared                  \
     no-deprecated           \
     no-dynamic-engine       \
     no-zlib                 \
@@ -96,6 +98,7 @@ make dclean
     no-mdc2                 \
     no-psk                  \
     no-rc2                  \
+    no-rc4                  \
     no-rc5                  \
     no-sctp                 \
     no-sha0                 \
@@ -128,7 +131,7 @@ build
 PREFIX=$(pwd)/${PKG}_32_build
 #need: sudo yum install libstdc++-devel.i686
 export CC="gcc -m32"
-build
+#build
 )
 
 wait
