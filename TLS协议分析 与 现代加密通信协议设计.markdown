@@ -1,4 +1,22 @@
-﻿#  TLS协议分析 与 现代加密通信协议设计
+---
+layout: post
+title: "TLS协议分析 与 现代加密通信协议设计"
+date: 2015-09-06 22:32:55 +0000
+comments: true
+categories: 
+    - crypto
+    - TLS
+keywords: tls, crypto, protocol
+description: "TLS协议分析 与 现代加密通信协议设计"
+
+---
+
+
+<!--
+---
+
+
+#  TLS协议分析 与 现代加密通信协议设计
 
 标签（空格分隔）：密码学 tls
 
@@ -7,6 +25,7 @@
 ---
 
 
+-->
 
 最近发现密码学很有意思，刚好还和工作有点关系，就研究了一下，本文是其中一部分笔记和一些思考。
 
@@ -27,6 +46,9 @@
 **目录 :**
 
 [TOC]
+
+
+<!--more-->
 
 
 #一 . TLS协议的设计目标：
@@ -155,7 +177,7 @@ iana注册页面截图：
 
 例如其中这一行(这个是目前的主流配置):
 
-```
+``` c
     0xC0,0x2F  -  ECDHE-RSA-AES128-GCM-SHA256    TLSv1.2  Kx=ECDH        Au=RSA    Enc=AESGCM(128)    Mac=AEAD
 ```
 
@@ -219,19 +241,19 @@ record协议做应用数据的对称加密传输，占据一个TLS连接的绝�
 
  Record 协议 -- 从应用层接受数据，并且做:
 
-  1.    分片，逆向是重组
-  2.    生成序列号，为每个数据块生成唯一编号，防止被重放或被重排序
-  3.    压缩，可选步骤，使用握手协议协商出的压缩算法做压缩
-  4.    加密，使用握手协议协商出来的key做加密/解密
-  5.    算HMAC，对数据计算HMAC，并且验证收到的数据包的HMAC正确性
-  6.    发给tcp/ip，把数据发送给 TCP/IP 做传输(或其它ipc机制)。
+1.    分片，逆向是重组
+2.    生成序列号，为每个数据块生成唯一编号，防止被重放或被重排序
+3.    压缩，可选步骤，使用握手协议协商出的压缩算法做压缩
+4.    加密，使用握手协议协商出来的key做加密/解密
+5.    算HMAC，对数据计算HMAC，并且验证收到的数据包的HMAC正确性
+6.    发给tcp/ip，把数据发送给 TCP/IP 做传输(或其它ipc机制)。
 
 
 ###1. SecurityParameters
 
 record层的上述处理，完全依据下面这个SecurityParameters里面的参数进行：
 
-```
+``` c
       struct {
           ConnectionEnd          entity;
           PRFAlgorithm           prf_algorithm;
@@ -253,7 +275,7 @@ record层的上述处理，完全依据下面这个SecurityParameters里面的�
 
 record 层使用上面的SecurityParameters生成下面的6个参数（不是所有的CipherSuite都需要全部6个，如果不需要，那就是空）:
 
-```
+``` c
       client write MAC key
       server write MAC key
       client write encryption key
@@ -294,7 +316,7 @@ record 层使用上面的SecurityParameters生成下面的6个参数（不是所
 
 如上图所示，对要发送的数据流，首先分段，分段成如下格式：
 
-```
+```  c
       struct {
           uint8 major;
           uint8 minor;
@@ -334,7 +356,7 @@ record层的密码学保护:
 
 经过处理后的包格式定义如下：
 
-```
+``` c
       struct {
           ContentType type;
           ProtocolVersion version;
@@ -388,7 +410,7 @@ tls使用的是 MAC-then-Encrypt 的模式，导致了一些问题。
 ###4. record层的密码学保护--MAC
 
 TLS record 层 MAC的计算方法：
-```
+``` c
       MAC(MAC_write_key, seq_num +
                             TLSCompressed.type +
                             TLSCompressed.version +
@@ -400,7 +422,7 @@ TLS record 层 MAC的计算方法：
 可以看到把 seq_num，以及record header里面的几个字段也算进来了，这样**解决了防重放问题**，并且保证record的任何字段都不能被篡改。
 
 算完MAC，格式如下：
-```
+``` c
       stream-ciphered struct {
           opaque content[TLSCompressed.length];
           opaque MAC[SecurityParameters.mac_length];
@@ -415,8 +437,11 @@ TLS record 层 MAC的计算方法：
 stream cipher:
 算stream cipher，stream cipher的状态在连续的record之间会复用。
 stream cipher的主力是RC4，但是目前RC4已经爆出多个漏洞，所以实际中基本不使用流加密没法，详情请见：
+
 <https://tools.ietf.org/html/rfc7457#section-2.5> 
+
 [[FreeBuf] RC4加密已不再安全，破解效率极高](http://www.freebuf.com/news/72622.html)
+
 <http://www.imperva.com/docs/HII_Attacking_SSL_when_using_RC4.pdf>
 
 
@@ -426,7 +451,7 @@ stream cipher的主力是RC4，但是目前RC4已经爆出多个漏洞，所以�
 CBC模式块加密
 TLS目前靠得住的的块加密cipher也不多，基本就是AES（最靠谱，最主流），Camellia，SEED，（3DES，IDEA之类已经显得老旧，DES请禁用），加密完的格式如下：
 
-```
+``` c
       struct {
           opaque IV[SecurityParameters.record_iv_length];
           block-ciphered struct {
@@ -470,7 +495,7 @@ AEAD
 
 AEAD加密完的格式是：
 
-```
+``` c
       struct {
          opaque nonce_explicit[SecurityParameters.record_iv_length];
          aead-ciphered struct {
@@ -496,7 +521,7 @@ AEAD加密完的格式是：
 
    AEAD输入的additional_data 是:
 
-```
+``` c
       additional_data = seq_num + TLSCompressed.type +
                         TLSCompressed.version + TLSCompressed.length;
 ```
@@ -504,14 +529,14 @@ AEAD加密完的格式是：
 "+" 表示字符串拼接。
     可以看到，此处类似上面的MAC计算，算入了seq_num来防重放，type,version,length等字段防止这些元数据被篡改。
 
-```
+``` c
       AEADEncrypted = AEAD-Encrypt(write_key, nonce, plaintext,
                                    additional_data)
 ```
   
   解密+验证完整性：
   
-```
+``` c
     TLSCompressed.fragment = AEAD-Decrypt(write_key, nonce,
                                             AEADEncrypted,
                                             additional_data)
@@ -528,7 +553,7 @@ Key 扩展
 
 TLS握手生成的master_secret只有48字节，2组encryption key, MAC key, IV加起来，长度一般都超过48，(例如 AES_256_CBC_SHA256 需要 128字节),所以，TLS里面用1个函数，来把48字节延长到需要的长度，称为PRF：
 
-```
+``` c
       key_block = PRF(SecurityParameters.master_secret,
                       "key expansion",
                       SecurityParameters.server_random +
@@ -537,7 +562,7 @@ TLS握手生成的master_secret只有48字节，2组encryption key, MAC key, IV�
 
 然后，key_block像下面这样被分割：
 
-```
+``` c
       client_write_MAC_key[SecurityParameters.mac_key_length]
       server_write_MAC_key[SecurityParameters.mac_key_length]
       client_write_key[SecurityParameters.enc_key_length]
@@ -551,7 +576,7 @@ TLS握手生成的master_secret只有48字节，2组encryption key, MAC key, IV�
   
 首先定义P_hash，把(secret,seed)扩展成无限长的字节流：
 
-```
+``` c
       P_hash(secret, seed) = HMAC_hash(secret, A(1) + seed) +
                              HMAC_hash(secret, A(2) + seed) +
                              HMAC_hash(secret, A(3) + seed) + ...
@@ -560,14 +585,14 @@ TLS握手生成的master_secret只有48字节，2组encryption key, MAC key, IV�
 其中"+"表示字符串拼接。
   A() 定义为:
 
-```
+``` c
       A(0) = seed
       A(i) = HMAC_hash(secret, A(i-1))
 ```
 
    TLS的 PRF 就是把 P\_hash 应用在secret上:
 
-```
+``` c
       PRF(secret, label, seed) = P_<hash>(secret, label + seed)
 ```
 
@@ -675,15 +700,22 @@ FIPS PUB 186-3  美国标准规定：
 **一对密钥只做一个用途，要么用作非对称加解密，要么用作签名验证，别混着用！**
 
 这个要求，决定了一个协议的 PFS（前向安全性），在斯诺登曝光NSA的“今日捕获，明日破解”政策后，**越发重要**。
+
 <https://news.ycombinator.com/item?id=5942534>
+
 <http://news.netcraft.com/archives/2013/06/25/ssl-intercepted-today-decrypted-tomorrow.html>
+
 <https://lwn.net/Articles/572926/>
+
 <https://www.eff.org/deeplinks/2014/04/why-web-needs-perfect-forward-secrecy>
+
 <http://www.wired.com/2013/10/lavabit_unsealed>
 
 PFS反映到密钥协商过程中，就是：
+
   -  **不要使用RSA做密钥协商，一定只用RSA做数字签名**。
   -  **不要把ECDH的公钥固定内置在客户端做密钥协商**
+
 后文可以看到这一原则在 TLS 1.3,  QUIC，Apple的iMessage等协议中一再贯彻。
 
 
@@ -696,10 +728,12 @@ PFS反映到密钥协商过程中，就是：
 由于设计的时候，就要考虑兼容性，而且实际历史悠久，所以TLS协议90年代曾经使用的一些算法，现在已经被破解了，例如有的被发现漏洞(rc4)，有的密钥长度过短(例如曾经美帝有出口限制，限制RSA 在512比特以下，对称加密密钥限制40比特以下，后来2005年限制被取消)，但是考虑到兼容，现在的TLS实现中，还是包含了这种已经被破解的老算法的代码。这样，如果攻击者可以干扰握手过程，诱使client和server使用这种已经被破解的算法，就会威胁TLS协议的安全，这被称为“降级攻击”。
 
 为了在握手协议解决降级攻击的问题，TLS协议规定：client发送ClientHello消息，server必须回复ServerHello消息，否则就是fatal error，当成连接失败处理。ClientHello和ServerHello消息用于建立client和server之间的安全增强能力，ClientHello和ServerHello消息建立如下属性： 
+
 *  Protocol Version
 *  Session ID 
 *  Cipher Suite 
 *  Compression Method.  
+
 另外，产生并交换两个random值 ClientHello.random 和 ServerHello.random
 
 密钥协商使用四条： server的Certificate，ServerKeyExchange，client的Certificate，ClientKeyExchange 。TLS规定以后如果要新增密钥协商方法，可以订制这4条消息的数据格式，并且指定这4条消息的使用方法。密钥协商得出的共享密钥**必须足够长**，**当前定义的密钥协商算法生成的密钥长度必须大于46字节**。
@@ -713,7 +747,7 @@ PFS反映到密钥协商过程中，就是：
 ![][tls_handshake]
 
 
-```
+``` c
 
       Client                                               Server
 
@@ -747,7 +781,7 @@ TLS的完整握手过程，要进行RSA/ECDH/ECDSA等非对称计算，非对称
 例如在2015年的服务器cpu：  Intel(R) Xeon(R) CPU E3-1230 V2 @ 3.30GHz 上，
 使用如下命令测试：
 
-``` shell
+``` sh
     openssl speed rsa2048
     openssl speed ecdsap256
     openssl speed ecdhp256
@@ -784,7 +818,7 @@ TLS的完整握手过程，要进行RSA/ECDH/ECDSA等非对称计算，非对称
    流程图如下：
   
 
-```
+``` c
       Client                                                Server
 
       ClientHello                   -------->
@@ -806,7 +840,7 @@ TLS的完整握手过程，要进行RSA/ECDH/ECDSA等非对称计算，非对称
 
 如下：
 
-```
+``` c
       enum {
           hello_request(0), client_hello(1), server_hello(2),
           certificate(11), server_key_exchange (12),
@@ -856,7 +890,7 @@ Hello消息有3个：ClientHello, ServerHello，HellloRequest
 消息结构：
 
 
-``` C
+``` c
 
    struct {
        uint32 gmt_unix_time;
@@ -933,7 +967,7 @@ compression_methods 后面可以跟一组扩展(extensions)， extensions都是�
 
 消息结构：
 
-``` C
+``` c
       struct {
           ProtocolVersion server_version;
           Random random;
@@ -958,8 +992,9 @@ server_version
       
  session_id
 :      服务器为本连接分配的SessionID。如果ClientHello.session_id不为空，服务器会在自己的本地做查找。
-      如果找到了匹配，并且服务器决定复用找到的session建立连接，服务器应该把ClientHello.session_id同样的 session id填入ServerHello.session_id，这表示恢复了一个session，并且双方会立即发送Finished消息。
-      否则，回复一个和ClientHello.random_id不同的Serverhello.session_id，来标识新session。服务器可以回复一个空的session_id，来告诉客户端这个session不要cache，不能恢复。
+
+* 如果找到了匹配，并且服务器决定复用找到的session建立连接，服务器应该把ClientHello.session_id同样的 session id填入ServerHello.session_id，这表示恢复了一个session，并且双方会立即发送Finished消息。
+* 否则，回复一个和ClientHello.random_id不同的Serverhello.session_id，来标识新session。服务器可以回复一个空的session_id，来告诉客户端这个session不要cache，不能恢复。
 如果一个session 被恢复了，那必须恢复成之前协商的session里面的 CipherSuite。要注意的是，并不要求服务器一定要恢复session，   服务器可以不做恢复。
 
 在实践中，session cache在服务器端要求key-value形式的存储，如果tls服务器不止一台的话，就有一个存储怎么共享的问题，要么存储同步到所有TLS服务器的内存里，要么专门搞服务来支持存储，并使用rpc访问，
@@ -979,7 +1014,7 @@ server_version
 
    The extension 的格式是:
 
-``` 
+```  c
 
       struct {
           ExtensionType extension_type;
@@ -1012,7 +1047,7 @@ HelloRequest的意思是，客户端应该开始协商过程。客户端应该�
 服务器发现客户端没有响应HelloRequest后，可以发送fatal error alert。
 
 消息结构：
-``` C
+``` c
       struct { } HelloRequest;
 ```
    HelloRequest不包含在握手消息的hash计算范围内。
@@ -1026,7 +1061,7 @@ Server Certificate里面包含了服务器的证书链。
 
 消息结构：
 
-``` C
+``` c
       opaque ASN.1Cert<1..2^24-1>;
 
       struct {
@@ -1109,7 +1144,7 @@ ServerKeyExchange传递足够的信息给客户端，来让客户端交换premas
 
 消息格式：
 
-```
+``` c
       enum { dhe_dss, dhe_rsa, dh_anon, rsa, dh_dss, dh_rsa,    ec_diffie_hellman
            } KeyExchangeAlgorithm;
 
@@ -1186,7 +1221,7 @@ ECParameters 结构比较麻烦，其中ECCurveType是支持3种曲线类型的�
 
 NamedCurve 列表中比较重要的曲线(在TLS1.3中，只保留了这几条曲线。)，定义如下：
 
-```
+``` c
         enum {
             ...
             secp256r1 (23), secp384r1 (24), secp521r1 (25),
@@ -1212,7 +1247,7 @@ TLS规定了一个可选功能：服务器可以认证客户端的身份，这�
 
 消息结构：
 
-```
+``` c
       enum {
           rsa_sign(1), dss_sign(2), rsa_fixed_dh(3),dss_fixed_dh(4),
           rsa_ephemeral_dh_RESERVED(5),dss_ephemeral_dh_RESERVED(6),
@@ -1259,7 +1294,7 @@ certificate_types
 
    -  客户端提供的末端证书必须提供一个和 certificate_types 兼容的key。 如果这个key是一个签名key，那必须能和 supported_signature_algorithms 中提供的某个 hash/signature 算法对配合使用。
 
-   -  由于历史原因，某些客户端证书类型的名字，包含了证书的签名算法，例如，早期版本的TLS中， rsa_fixed_dh 意思是一个被RSA算法签署，并且包含一个固定DH密钥的证书。在TLS1.2中，这个功能被 supported_signature_algorithms 淘汰，并且证书类型不再限制用来签署证书的算法。例如，如果服务器发送了 dss_fixed_dh 证书类型，和{{sha1, dsa}, {sha1, rsa}} 签名类型，客户端可以回复一个 包含静态DH密钥，用RSA-sha1签署的证书。 
+   -  由于历史原因，某些客户端证书类型的名字，包含了证书的签名算法，例如，早期版本的TLS中， rsa_fixed_dh 意思是一个被RSA算法签署，并且包含一个固定DH密钥的证书。在TLS1.2中，这个功能被 supported_signature_algorithms 淘汰，并且证书类型不再限制用来签署证书的算法。例如，如果服务器发送了 dss_fixed_dh 证书类型，和 { {sha1, dsa}, {sha1,rsa} } 签名类型，客户端可以回复一个 包含静态DH密钥，用RSA-sha1签署的证书。 
   
    - 如果协商出来的是匿名CipherSuite，服务器不能要求客户端认证。
 
@@ -1274,7 +1309,7 @@ ServerHelloDone消息表示，服务器已经发送完了密钥协商需要的�
 
 消息格式：
 
-```
+``` c
       struct { } ServerHelloDone;
 ```      
       
@@ -1320,7 +1355,7 @@ ClientKeyExchange消息中，会设置premaster secret，通过发送 RSA公钥�
 消息结构：
 消息的选择取决于选择的密钥交换算法。
 
-```
+``` c
       struct {
           select (KeyExchangeAlgorithm) {
               case rsa:
@@ -1341,7 +1376,7 @@ ClientKeyExchange消息中，会设置premaster secret，通过发送 RSA公钥�
 
 如果用RSA做密钥协商和认证，客户端生成 48字节的 premaster secret，使用服务器证书里面的公钥加密，然后把密文EncryptedPreMasterSecret发送给服务器，结构定义如下：
 
-```
+``` c
       struct {
           ProtocolVersion client_version;
           opaque random[46];
@@ -1414,7 +1449,7 @@ openssl中的RSA blinding，参见：<http://linux.die.net/man/3/rsa_blinding_on
 Yc的编码方式由 PublicValueEncoding 决定。
 
 消息的结构：
-```
+``` c
       enum { implicit, explicit } PublicValueEncoding;
 
       implicit
@@ -1437,7 +1472,7 @@ Yc的编码方式由 PublicValueEncoding 决定。
 
 #### (3).  客户端 EC Diffie-Hellman 公钥
 
-```
+``` c
         struct {
             select (PublicValueEncoding) {
                 case implicit: struct { };
@@ -1457,7 +1492,7 @@ Diffie-Hellman 推广到椭圆曲线群上，就是 EC Diffie-Hellman ，简称 
 消息结构：
    Structure of this message:
 
-```
+``` c
       struct {
            digitally-signed struct {
                opaque handshake_messages[handshake_messages_length];
@@ -1479,7 +1514,7 @@ Finished 消息是第一条用刚刚协商出来的参数保护的消息。接�
 
 消息结构：
 
-```
+``` c
       struct {
           opaque verify_data[verify_data_length];
       } Finished;
@@ -1520,7 +1555,7 @@ SessionTicket可以用于任何CipherSuite。 TLS 1.0, TLS 1.1, TLS 1.2 都适�
 如果服务器希望使用 SessionTicket 机制，服务器把本地的 session 状态存入一个ticket中，ticket会被加密，并被MAC保护，无法篡改，加密和算MAC用的key只有服务器知道。 
 加密并MAC过的ticket用 NewSessionTicket 消息分发给客户端，NewSessionTicket 消息应该在 ChangeCipherSpec 消息之前，在服务器验证通过客户端的Finished消息之后发送。
 
-```
+``` c
 
       Client                                               Server
       ClientHello
@@ -1548,7 +1583,7 @@ SessionTicket可以用于任何CipherSuite。 TLS 1.0, TLS 1.1, TLS 1.2 都适�
 服务器收到后，解密ticket，算MAC确认ticket没有被篡改过，然后从解密的内容里面，获取session 状态，用来恢复会话。如果服务器成功地验证了ticket，可以在 ServerHello 之后返回一个 NewSessionTicket 消息来更新ticket。
 
 显然，这种情况下，相比完整握手，可以省掉1个RTT。如下图：
-```
+``` c
 
       Client                                                Server
       ClientHello
@@ -1584,7 +1619,7 @@ NewSessionTicket 消息
 服务器可以NewSessionTicket消息中更新 ticket。
 
 ticket_lifetime_hint 字段包含一个服务器的提示，提示客户端本ticket应该存多长时间就失效。单位是秒，网络字节序。当时间到期时，客户端应该删掉ticket和关联的状态。客户端也可以提前删除。服务器端也可以提前认为ticket失效。
-```
+``` c
       struct {
           uint32 ticket_lifetime_hint;
           opaque ticket<0..2^16-1>;
@@ -1600,7 +1635,7 @@ RFC5077中推荐了一种ticket的加密保护方法：
 
 ticket的格式像这样：
 
-```
+``` c
       struct {
           opaque key_name[16];
           opaque iv[16];
@@ -1618,7 +1653,7 @@ ticket的格式像这样：
 
 实际在openssl 中的session，用asn1格式序列化保存了下面这些字段：
 
-``` C
+``` c
  typedef struct ssl_session_asn1_st {
      ASN1_INTEGER version;
      ASN1_INTEGER ssl_version;
@@ -1733,22 +1768,8 @@ RSA密钥交换和认证的安全性基于，在验证了服务器的证书之�
 
 由于 TLS 历史上出现过多个版本，服务器端实现可能会兼容多个版本的协议，而像 SSL 2.0 这样的版本是有严重安全问题的，因此攻击者可能会尝试诱骗客户端和服务器，来使TLS连接回退到 SSL 2.0这种老版本。
 
+TLS 对此的解决办法，就是PreMasterSecret里面包含版本号。
 
-Because TLS includes substantial improvements over SSL Version 2.0, 
-attackers may try to make TLS-capable clients and servers fall back 
-to Version 2.0. This attack can occur if (and only if) two TLS- 
-capable parties use an SSL 2.0 handshake.
-
-Although the solution using non-random PKCS #1 block type 2 message 
-padding is inelegant, it provides a reasonably secure way for Version 
-3.0 servers to detect the attack. This solution is not secure 
-against attackers who can brute-force the key and substitute a new 
-ENCRYPTED-KEY-DATA message containing the same key (but with normal 
-padding) before the application-specified wait threshold has expired. 
-Altering the padding of the least-significant 8 bytes of the PKCS 
-padding does not impact security for the size of the signed hashes 
-and RSA key lengths used in the protocol, since this is essentially 
-equivalent to increasing the input block size by 8 bytes.
 
 ###3. 针对握手过程的攻击
 攻击者可能会尝试影响握手过程，来使双方选择不安全的加密算法。
@@ -1757,234 +1778,103 @@ equivalent to increasing the input block size by 8 bytes.
 
 ###4. 针对 Resuming Sessions 的攻击
 
+当使用 session resuming的时候，会产生新的 ClientHello.random 和 ServerHello.random ，并和session的 master_secret 一同被hash。只要master_secret没有泄漏，并且PRF中用来生成加密key和MAC key的hash算法是安全的，连接就是安全的，并且独立于前一个连接(被恢复的前一个连接)。
 
-   When a connection is established by resuming a session, new
-   ClientHello.random and ServerHello.random values are hashed with the
-   session's master_secret.  Provided that the master_secret has not
-   been compromised and that the secure hash operations used to produce
-   the encryption keys and MAC keys are secure, the connection should be
-   secure and effectively independent from previous connections.
-   Attackers cannot use known encryption keys or MAC secrets to
-   compromise the master_secret without breaking the secure hash
-   operations.
+只有在客户端和服务器都同意的情况下，才会做session resuming。只要有任意一方怀疑 session 泄漏，或者证书过期/被吊销，就可以要求对端做完整的握手。
+一个session的生命周期建议定位24小时。由于如果攻击者获得了 master_secret 就可以在session ID过期之前伪装成被泄漏者，所以要加一个生命期限制。
+运行在不安全环境的应用程序，不应该把session ID写入持久存储。
 
-   Sessions cannot be resumed unless both the client and server agree.
-   If either party suspects that the session may have been compromised,
-   or that certificates may have expired or been revoked, it should
-   force a full handshake.  An upper limit of 24 hours is suggested for
-   session ID lifetimes, since an attacker who obtains a master_secret
-   may be able to impersonate the compromised party until the
-   corresponding session ID is retired.  Applications that may be run in
-   relatively insecure environments should not write session IDs to
-   stable storage.
-   
 ###5. 针对应用数据保护的攻击
 
-   The master_secret is hashed with the ClientHello.random and
-   ServerHello.random to produce unique data encryption keys and MAC
-   secrets for each connection.
+master_secret 和 ClientHello.random 及   ServerHello.random 一起做 hash，来生成每个连接唯一的加密key和MAC key（就算是session resuming得到的连接，也是不同的）。
 
-   Outgoing data is protected with a MAC before transmission.  To
-   prevent message replay or modification attacks, the MAC is computed   from the MAC key, the sequence number, the message length, the
-   message contents, and two fixed character strings.  The message type
-   field is necessary to ensure that messages intended for one TLS
-   record layer client are not redirected to another.  The sequence
-   number ensures that attempts to delete or reorder messages will be
-   detected.  Since sequence numbers are 64 bits long, they should never
-   overflow.  Messages from one party cannot be inserted into the
-   other's output, since they use independent MAC keys.  Similarly, the
-   server write and client write keys are independent, so stream cipher
-   keys are used only once.
+在CBC和stream cipher的情况下，
+发送出去的数据，在发送前用MAC保护，来避免消息重放，避免篡改。
+MAC根据 MAC key，序列号，消息长度，消息内容，固定字符串算出。
+消息类型字段（content type）是必须的，来确保握手消息，ChangeCipherSpec消息，应用数据消息不会被混淆。
+序列号用来确保删除包或者打乱包顺序的攻击无法得逞。
+由于序列号是64位的，可以认为不会回绕。
+从一方发给对端的消息，不能被插入对端发来的字节流中，这是用于两端使用不同的 MAC key。
+类似地，server write key 和 client write key相互独立。因此stream cipher的key只使用了一次，避免了类似问题。
 
-   If an attacker does break an encryption key, all messages encrypted
-   with it can be read.  Similarly, compromise of a MAC key can make
-   message-modification attacks possible.  Because MACs are also
-   encrypted, message-alteration attacks generally require breaking the
-   encryption algorithm as well as the MAC.
-
-   Note: MAC keys may be larger than encryption keys, so messages can
-   remain tamper resistant even if encryption keys are broken.
+如果攻击者获取了加密key，那么就可以解密所有的消息。
+类似地，泄漏MAC key，会使攻击者可以篡改消息。
 
 
-###6. 显式 IV的安全性Explicit IVs
+AEAD就简单了。
 
-   [CBCATT] describes a chosen plaintext attack on TLS that depends on   knowing the IV for a record.  Previous versions of TLS [TLS1.0] used   the CBC residue of the previous record as the IV and therefore   enabled this attack.  This version uses an explicit IV in order to   protect against this attack.
+
+###6. 显式 IV的安全性
+
+如前文所述，TLS 1.0是把前一条消息的最后一个block，当作下一条消息的第一个IV的，这促成了2004年公开的 BEAST 攻击，后来就改成这种显式IV的更安全的方式了。
 
 
 ###7. 加密和MAC组合模式的安全性 
 
-
-   TLS secures transmitted application data via the use of symmetric
-   encryption and authentication functions defined in the negotiated
-   cipher suite.  The objective is to protect both the integrity and
-   confidentiality of the transmitted data from malicious actions by
-   active attackers in the network.  It turns out that the order in
-   which encryption and authentication functions are applied to the data
-   plays an important role for achieving this goal [ENCAUTH].
-
-   The most robust method, called encrypt-then-authenticate, first
-   applies encryption to the data and then applies a MAC to the
-   ciphertext.  This method ensures that the integrity and
-   confidentiality goals are obtained with ANY pair of encryption and
-   MAC functions, provided that the former is secure against chosen
-   plaintext attacks and that the MAC is secure against chosen-message
-   attacks.  TLS uses another method, called authenticate-then-encrypt,
-   in which first a MAC is computed on the plaintext and then the
-   concatenation of plaintext and MAC is encrypted.  This method has
-   been proven secure for CERTAIN combinations of encryption functions
-   and MAC functions, but it is not guaranteed to be secure in general.
-
-   In particular, it has been shown that there exist perfectly secure
-   encryption functions (secure even in the information-theoretic sense)
-   that combined with any secure MAC function, fail to provide the
-   confidentiality goal against an active attack.  Therefore, new cipher
-   suites and operation modes adopted into TLS need to be analyzed under
-   the authenticate-then-encrypt method to verify that they achieve the
-   stated integrity and confidentiality goals.
-
-   Currently, the security of the authenticate-then-encrypt method has
-   been proven for some important cases.  One is the case of stream
-   ciphers in which a computationally unpredictable pad of the length of
-   the message, plus the length of the MAC tag, is produced using a
-   pseudorandom generator and this pad is exclusive-ORed with the
-   concatenation of plaintext and MAC tag.  The other is the case of CBC
-   mode using a secure block cipher.  In this case, security can be
-   shown if one applies one CBC encryption pass to the concatenation of
-   plaintext and MAC and uses a new, independent, and unpredictable IV
-   for each new pair of plaintext and MAC.  In versions of TLS prior to
-   1.1, CBC mode was used properly EXCEPT that it used a predictable IV
-   in the form of the last block of the previous ciphertext.  This made
-   TLS open to chosen plaintext attacks.  This version of the protocol
-   is immune to those attacks.  For exact details in the encryption
-   modes proven secure, see [ENCAUTH].
+前文介绍CBC和AEAD时已有分析，此处略过。
 
 
 ###8. DOS 攻击下的安全性
 
-   TLS is susceptible to a number of denial-of-service (DoS) attacks.
-   In particular, an attacker who initiates a large number of TCP
-   connections can cause a server to consume large amounts of CPU for
-   doing RSA decryption.  However, because TLS is generally used over
-   TCP, it is difficult for the attacker to hide his point of origin if
-   proper TCP SYN randomization is used [SEQNUM] by the TCP stack.
+TLS容易遭受某些 DoS 攻击。例如，攻击者创建很多TCP连接，就可以让服务器忙于做 RSA 解密计算。然而，由于TLS运行在TCP之上，只要操作系统TCP栈的 SYN-ACK里seqnum是随机的，攻击者就无法隐藏自己的ip，这样就可以和一般的TCP连接一样做DOS防御。
 
-   Because TLS runs over TCP, it is also susceptible to a number of DoS
-   attacks on individual connections.  In particular, attackers can
-   forge RSTs, thereby terminating connections, or forge partial TLS
-   records, thereby causing the connection to stall.  These attacks
-   cannot in general be defended against by a TCP-using protocol.
-   Implementors or users who are concerned with this class of attack
-   should use IPsec AH [AH] or ESP [ESP].
+由于TLS运行在TCP上，每个独立的连接都可能遭受一系列DOS攻击。尤其是，攻击者可以伪造RST包，来中断一条TCP+TLS连接。或者伪造部分TLS记录，导致连接阻塞挂起。不过这些攻击都是任何TCP协议都有问题，不是TLS特有的。
 
 ###9.Session Ticket 的安全分析
 
-This section addresses security issues related to the usage of a 
-ticket. Tickets must be authenticated and encrypted to prevent 
-modification or eavesdropping by an attacker. Several attacks 
-described below will be possible if this is not carefully done.
+Ticket必须: 1.有MAC （即 authenticated，不可篡改），2.加密（即保密）。
 
-5.1. Invalidating Sessions
+下面分析在各种攻击方法下的安全性。
 
-The TLS specification requires that TLS sessions be invalidated when 
-errors occur. [CSSC] discusses the security implications of this in 
-detail. In the analysis in this paper, failure to invalidate 
-sessions does not pose a security risk. This is because the TLS 
-handshake uses a non-reversible function to derive keys for a session 
-so information about one session does not provide an advantage to 
-attack the master secret or a different session. If a session 
-invalidation scheme is used, the implementation should verify the 
-integrity of the ticket before using the contents to invalidate a 
-session to ensure that an attacker cannot invalidate a chosen 
-session.
+####1. 无效的Session 
 
-5.2. Stolen Tickets
+TLS协议要求当发现错误的时候，把TLS session变为无效。
 
-An eavesdropper or man-in-the-middle may obtain the ticket and 
-attempt to use the ticket to establish a session with the server; 
-however, since the ticket is encrypted and the attacker does not know 
-the secret key, a stolen ticket does not help an attacker resume a 
-session. A TLS server MUST use strong encryption and integrity 
-protection for the ticket to prevent an attacker from using a brute 
-force mechanism to obtain the ticket's contents.
+这不会影响到ticket的安全性。
 
-5.3. Forged Tickets
+####2. 窃取 Tickets
 
-A malicious user could forge or alter a ticket in order to resume a 
-session, to extend its lifetime, to impersonate as another user, or 
-to gain additional privileges. This attack is not possible if the 
-ticket is protected using a strong integrity protection algorithm 
-such as a keyed HMAC-SHA1.
+攻击者或者中间人，可能会窃取到ticket，并且尝试用来和server建立会话。
+然而，由于ticket是加密过的，并且攻击者不知道密钥，窃取到的ticket无法使攻击者恢复会话。
+TLS服务器必须使用强加密和MAC算法，来保护ticket。
 
-5.4. Denial of Service Attacks
+####3. 伪造 Tickets
 
-The key_name field defined in the recommended ticket format helps the 
-server efficiently reject tickets that it did not issue. However, an 
-adversary could store or generate a large number of tickets to send 
-to the TLS server for verification. To minimize the possibility of a 
-denial of service, the verification of the ticket should be 
-lightweight (e.g., using efficient symmetric key cryptographic 
-algorithms).
+一个恶意用户可能会伪造，或者篡改一个ticket，来恢复一个会话，来延长ticket的生命周期，或者假装成另一个用户。
 
-5.5. Ticket Protection Key Management
+然而，由于服务器使用了强的校验保护算法，比如带密码的 HMAC-SHA1 ，因此无法得逞。
 
-A full description of the management of the keys used to protect the 
-ticket is beyond the scope of this document. A list of RECOMMENDED 
-practices is given below.
+####4. DoS 攻击 
 
-o The keys should be generated securely following the randomness 
-recommendations in [RFC4086]. 
-o The keys and cryptographic protection algorithms should be at 
-least 128 bits in strength. 
-o The keys should not be used for any other purpose than generating 
-and verifying tickets. 
-o The keys should be changed regularly. 
-o The keys should be changed if the ticket format or cryptographic 
-protection algorithms change.
+推荐ticket 格式中的 key_name 字段帮助服务器有效地拒绝不是自己签发的票据。
+因此，一个攻击者可能发送大量的ticket，让服务器忙于验证ticket。
+然而，只要服务器使用了高效的加密和MAC算法，就不会有问题。（现实中，加密和MAC算法效率都极高，这根本不是问题）
 
-5.6. Ticket Lifetime
+####5. 加密 Ticket 的key 的管理
 
-The TLS server controls the lifetime of the ticket. Servers 
-determine the acceptable lifetime based on the operational and 
-security requirements of the environments in which they are deployed. 
-The ticket lifetime may be longer than the 24-hour lifetime 
-recommended in [RFC2246]. TLS clients may be given a hint of the 
-lifetime of the ticket. Since the lifetime of a ticket may be 
-unspecified, a client has its own local policy that determines when 
-it discards tickets.
+加密ticket的key的管理，推荐的做法：
 
-5.7. Alternate Ticket Formats and Distribution Schemes
+*  key 应该用密码学安全的随机数生成器生成，按照RFC4086。
+*  key 和加密算法最少应该是 128 比特安全程度的。
+*  key 除了加密和解密ticket以外，不应该有其他用途。
+*  key 应该定期更换
+*  当ticket格式更换，或者算法更换时，应该更换key
 
-If the ticket format or distribution scheme defined in this document 
-is not used, then great care must be taken in analyzing the security 
-of the solution. In particular, if confidential information, such as 
-a secret key, is transferred to the client, it MUST be done using 
-secure communication so as to prevent attackers from obtaining or 
-modifying the key. Also, the ticket MUST have its integrity and 
-confidentiality protected with strong cryptographic techniques to 
-prevent a breach in the security of the system.
 
-5.8. Identity Privacy, Anonymity, and Unlinkability
+####6. Ticket 的有效期
 
-This document mandates that the content of the ticket is 
-confidentiality protected in order to avoid leakage of its content, 
-such as user-relevant information. As such, it prevents disclosure 
-of potentially sensitive information carried within the ticket.
+TLS服务器控制ticket的生命周期。服务器根据配置来决定可以接受的ticket生命周期。
+ticket的生命周期可能会长于24小时。TLS客户端可能会接受到一个ticket生命周期的提示，当然，客户端本地的策略最终决定ticket保存多久。
 
-The initial handshake exchange, which was used to obtain the ticket, 
-might not provide identity confidentiality of the client based on the 
-properties of TLS. Another relevant security threat is the ability
+####7. 其他的 Ticket 格式和分发方法
 
-for an on-path adversary to observe multiple TLS handshakes where the 
-same ticket is used and therefore to conclude that they belong to the 
-same communication endpoints. Application designers that use the 
-ticket mechanism described in this document should consider that 
-unlinkability [ANON] is not necessarily provided.
+如果没使用推荐的ticket格式，那必须小心地分析方案的安全性。尤其是，如果保密数据比如保密密钥传输给了客户端，那必须用加密方式传输，来防止泄露或篡改。
 
-While a full discussion of these topics is beyond the scope of this 
-document, it should be noted that it is possible to issue a ticket 
-using a TLS renegotiation handshake that occurs after a secure tunnel 
-has been established by a previous handshake. This may help address 
-some privacy and unlinkability issues in some environments.
+####8. Identity Privacy, Anonymity, and Unlinkability
+
+ticket的加密和加MAC，就保证了敏感信息不会泄露。
+
+由于在ticket解密之前的TLS握手，无法隐藏客户端的特征，因此中间人可能根据相同的ticket被复用，发现相同的ticket属于相同的用户。TLS对这种情况不提供保证。
 
 
 ##9. TLS扩展:
@@ -2025,19 +1915,23 @@ X.509是PKI的一个标准，其中内容包括：
 
 X.509使用ASN.1语法做序列化/反序列化
 
-DER
+ASN1 就是一个数据序列化/反序列化格式，跟 protobuf 差不多，可以算作竞争对手。
 
-证书和公钥是什么关系？
+DER 就是用 ASN1 序列化某些数据结构的格式。
 
+PEM 就是 DER做base64，加上一些其他字段。
+
+
+证书链，以一个或多个CA证书开头的证书的列表，其中:
+
+*  每一个证书的 Issuer 和下一个证书的 Subject 相同
+*  每一个证书都被下一个证书的私钥签署
+*  最后一个证书是 根证书("root CA")，在TLS握手中不会被发送
+  
 ![][handshake_certificate_chain]
 
-Certificate Chain:
-A list of certificates followed by one or more CA certificates,
-where:
-*   The Issuer of each certificate matches the Subject of the next
-*   Each cert is signed by the private key of the following cert
-*   The last cert in the chain (although not sent in the SSL/TLS handshake) is the “root CA”
 
+证书里面包含公钥，和其它一些字段（比如证书用途，有效期，签发者等等）
 x509.v3证书的字段：
 ![][tls_certificate_x509_example]
 
@@ -2046,25 +1940,35 @@ mozilla的ca证书列表
 https://www.mozilla.org/en-US/about/governance/policies/security-group/certs/
 
 
-
 https://www.apple.com/certificateauthority/ca_program.html
 苹果对CA提的要求：
 
 1.CA必须取得完整的 WebTrust for Certification Authorities audit （WebTrust CA审计：http://www.webtrust.org/）
 2.你的root CA证书必须为apple平台的用户提供广泛的商业价值。例如，一个组织内内部使用的证书不能被接受为root证书。
 3.你签的证书必须含有可以公开访问的CRL地址。
-4.
 
 Webtrust审计介绍：
 Webtrust是由世界两大著名注册会计师协会（美国注册会计师协会，AICPA和加拿大注册会计师协会，CICA）制定的安全审计标准，主要对申请对象的系统及业务运作逻辑安全性、保密性等共计七项内容进行近乎严苛的审查和鉴证。只有通过Webtrust国际安全审计认证，才有可能成为全球主流浏览器根信任的证书签发机构。
 
 https://www.geotrust.com/
-的网站上右下角：
+的网站上右下角，有个图标: ![][webtrust_logo]
+点开就可以看到 KPMG 对 geotrust 公司的 webtrust 审计报告:
+https://cert.webtrust.org/SealFile?seal=1567&file=pdf
+
 
 
  2011年 荷兰CA公司DigiNotar颁发假google，Facebook，微软证书被发现，后发现被入侵，导致该公司破产。
 http://www.cnbeta.com/articles/154375.htm
 
+<https://news.ycombinator.com/item?id=530600>
+CA公司签署一个证书的成本是0 。
+CA公司的主要成本构成：审核 ，验证CSR成本，支持成本，法律成本(保险费用，担保费用)。
+要进入各个浏览器的根证书列表，CA公司每年必须过 WebTrust 年度审计，是很大的开销。
+一些浏览器厂商还会对植入根证书列表的CA收费。
+基础设施开销，CRL 和 OCSP 服务器成本。
+验证CSR：就是提交证书申请后，CA要做多项验证，越是高级的证书（比如EV）验证越麻烦。不固定开销，有些要花费很多人力和时间来完成。
+法律开销：CA公司得买保险，保险费跑不了。
+CA链费用：新开的CA公司要等5-10年，才会被普遍信任，才能广泛进入根证书链。要想加快点，就得给别的大牌CA公司掏钱，买次级证书。
 
 
 
@@ -2089,87 +1993,104 @@ http://www.cnbeta.com/articles/154375.htm
 收录进chrome的默认HSTS列表：	https://hstspreload.appspot.com/
 
 
-##11. 几个重要话题：session cache/ticket, PFS，OCSP stapling
+##11. TLS协议历史上出现过的漏洞，密码学常见陷阱
 
+###1. TLS的漏洞
 
+漏洞分析很耗时间，这里总结一些资料，有兴趣的自己看吧。
 
+虽然TLS的设计已经尽可能的严密，但是随着技术进步的滚滚车轮，历史上还是出现过很多漏洞，
+可以参看这个rfc，做了总结：
 
-##12. TLS协议历史上出现过的漏洞，密码学常见漏洞
+[Summarizing Known Attacks on Transport Layer Security (TLS) and Datagram TLS (DTLS)](https://tools.ietf.org/html/rfc7457)
 
-虽然TLS的设计已经尽可能的严密，但是随着技术进步，历史上还是出现过很多漏洞，
-可以参看这个rfc：[Summarizing Known Attacks on Transport Layer Security (TLS) and Datagram TLS (DTLS)](https://tools.ietf.org/html/rfc7457)
-
+还有这个文档：
 [The Sorry State Of SSL](https://hynek.me/talks/tls/)
 
-<https://www.smacktls.com/>
 
-http://blog.avira.com/md5-the-broken-algorithm/
+<http://hyperelliptic.org/internetcrypto/OpenSSLPresentation.pdf>
 
-[The Most Dangerous Code in the World: Validating SSL Certificates in Non-Browser Software](https://www.cs.utexas.edu/~shmat/shmat_ccs12.pdf)
+
+TLS 协议最近一些年被爆出过的设计缺陷，尤其是在用的最多的 AES-CBC 和 RC4 上。
+
+AES-CBC 发现了: 
+1.  padding oracle 攻击 
+2.  BEAST 攻击 
+3.  Lucky 13 攻击 
+4.  TIME 攻击 
+5.  POODLE攻击
+
+2013 年, AlFardan发表了对 RC4 的一个攻击分析，展示如何恢复 RC4 传输的连接上的数据。这种恢复攻击利用了RC4的一些已知弱点，例如RC4最初的一些字节的显著统计特征。
+
+最近几年，TLS的代码实现引起了安全研究者的关注，这导致了新漏洞不断发现。
+2014年，OpenSSL库爆出了好几个漏洞，例如 HeartBleed，还有 CVE-2014-6321 ( Microsoft SChannel 的实现漏洞)等.
+
+
+TLS的问题:
+
+• 很多问题是由于TLS使用了一些“史前时代”的密码学算法(- Eric Rescorla)
+• CBC 和 Mac-Pad-then-Encrypt
+• RSA-PKCS#1v1.5 的 RSA padding
+• RC4 的任何使用
+• 很蠢的设计：临时 RSA 密钥协商，GOST 类CipherSuite，Snap Start 等
+• 可怕的向后兼容要求，导致迟迟不能废弃一些老算法。
+
+The Most Dangerous Code in the World: Validating SSL Certificates in Non-Browser Software
+
+<http://crypto.stanford.edu/~dabo/pubs/abstracts/ssl-client-bugs.html>
+
+<https://www.cs.utexas.edu/~shmat/shmat_ccs12.pdf>
 
 [Why Eve and Mallory Love Android An Analysis of Android SSL (In)Security](https://www.dfn-cert.de/dokumente/workshop/2013/FolienSmith.pdf)
 
-http://www.cryptofails.com/
+###2. 密码学常见陷阱
 
-http://cryptofails.blogspot.ca/
+先举几个加密协议被破解的例子，给大家助兴：
 
-
-SSL Protocol Weaknesses(出现过的设计缺陷)
-Over the last couple of years, several significant vulnerabilities have been discovered in the SSL protocol, particularly in the most commonly used variants, AES-CBC and RC4. The AES-CBC variant has seen significant cryptanalysis (padding oracle attacks [5], BEAST [6], Lucky 13 [7], TIME [16], and POODLE [15]). And in 2013, AlFardan et-al published an analysis [8] of the RC4 mode which showed how to mount an attack that recovers data transmitted over a SSL/RC4 connection. The attack was based on some of the many known weaknesses of RC4 – in particular, the significant statistical biases in its first output bytes, and the weaker statistical biases in the RC4 keystream.
-伤痕累累的 AES-CBC 和 RC4
-
-
-In recent years, SSL implementations have received significant attention and scrutiny from security researchers, and this has resulted in steady discovery of new vulnerabilities (and patching, with or without disclosure). In 2014, several dozen vulnerabilities were discovered in the OpenSSL library (the most popular implementation of SSL). Heartbleed was the most  severe in that it allowed an attacker to dump memory segments from the SSL server, and in many cases exposing secret key information. Vulnerabilities in several other implementations were published as well (e.g., CVE-2014-6321 in Microsoft SChannel).
-糟糕的OpenSSL
-
-<http://hyperelliptic.org/internetcrypto/OpenSSLPresentation.pdf>
-It’s bad
-• Many problems result from TLS’s use of “pre-historic cryptography” (- Eric Rescorla)
-• CBC with Mac-Pad-then-Encrypt
-• RSA-PKCS#1v1.5 encryption padding
-• RC4 with...........
-• Goofy stuff: ephemeral RSA key agreement, GOST ciphersuite, Snap Start, False Start (withdrawn)
-• Horrifying backwards compatibility requirements
-
-The most dangerous code in the world: validating SSL certificates in non-browser software
-<http://crypto.stanford.edu/~dabo/pubs/abstracts/ssl-client-bugs.html>
-
-
-举几个加密协议被破解的例子，给大家助兴：
    * [人人网使用256比特RSA加密登录密码，3分钟可破](https://www.91ri.org/8928.html)
    * [Flickr length extension attack 漏洞](http://www.happybearsoftware.com/you-are-dangerously-bad-at-cryptography.html)
    * [分析whatsapp协议缺陷的一个文章](https://blog.thijsalkema.de/blog/2013/10/08/piercing-through-whatsapp-s-encryption/)
    * [卫星电话的私有gmr-1/gmr-2加密算法被逆向并破解](https://cryptanalysis.eu/blog/2012/02/02/dont-trust-satellite-phones-the-gmr-1-and-gmr-2-ciphers-have-been-broken/)
+   * http://cryptofails.blogspot.ca/2013/07/cakephp-using-iv-as-key.html
+   * http://cryptofails.blogspot.ca/2013/07/saltstack-rsa-e-d-1.html
 
 
-https://www.schneier.com/essays/archives/1998/01/security_pitfalls_in.html
 
-https://www.schneier.com/essays/archives/1999/03/cryptography_the_imp.html
 
-<http://www.lauradhamilton.com/10-cryptography-mistakes-amateurs-make>
+
+网上有一些资料，有兴趣自己看吧:
+
+*  <https://www.schneier.com/essays/archives/1998/01/security_pitfalls_in.html>
+*  <https://www.schneier.com/essays/archives/1999/03/cryptography_the_imp.html>
+*  <http://www.lauradhamilton.com/10-cryptography-mistakes-amateurs-make>
+*  <http://www.cryptofails.com/>
+*  <http://cryptofails.blogspot.ca/>
+
 
 密码学常见应用错误
 <http://security.stackexchange.com/questions/2202/lessons-learned-and-misconceptions-regarding-encryption-and-cryptology>
 
-*  Don't roll your own crypto.
-*  Don't use encryption without message authentication
-*  Be careful when concatenating multiple strings, before hashing.
-*  Make sure you seed random number generators with enough entropy.
-*  Don't reuse nonces or IVs
-*  Don't use the same key for both encryption and authentication. Don't use the same key for both encryption and signing.
-*  Don't use a block cipher with ECB for symmetric encryption
-*  Kerckhoffs's principle: A cryptosystem should be secure even if everything about the system, except the key, is public knowledge
-*  Try to avoid using passwords as encryption keys.
-*  In a cryptographic protocol: Make every authenticated message recognisable: no two messages should look the same
-*  Don't use the same key in both directions.
-*  Don't use insecure key lengths.
+*  不要自己发明加密算法。Don't roll your own crypto. 
+*  不要使用不带MAC的加密 Don't use encryption without message authentication.
+*  在拼接多个字符串做hash之前，要特别小心 Be careful when concatenating multiple strings, before hashing. 
+*  要特别小心使用的随机数生成器，确保有足够的熵 Make sure you seed random number generators with enough entropy. 
+*  不要重用 nonce 或者。IV Don't reuse nonces or IVs.  
+*  加密和MAC不要使用同样的key，非对称加密和签名不要使用相同的key Don't use the same key for both encryption and authentication. Don't use the same key for both encryption and signing.  
+*  不要使用ECB模式做对称加密 Don't use a block cipher with ECB for symmetric encryption 
+*  Kerckhoffs定律，一个密码学系统的安全性必须建立在密码保密的基础上，其他都是公开的。Kerckhoffs's principle: A cryptosystem should be secure even if everything about the system, except the key, is public knowledge  
+*  不要把用户产生的密码作为加密的key。Try to avoid using passwords as encryption keys.
+*  在密码学协议中，任何2条消息的密文都不应该一样。In a cryptographic protocol: Make every authenticated message recognisable: no two messages should look the same
+*  不要把相同的key用在通信的2个方向上。Don't use the same key in both directions.
+*  不要使用不安全的key长度。Don't use insecure key lengths.
 *  ...
 
 
 ##13. 下一代TLS: TLS 1.3
 
 tls 1.3的草案在 <http://tlswg.github.io/tls13-spec/>
-相比tls 1.2,  1.3改动巨大，这些改动对加密通信协议的一般设计也有重要启发，
+相比tls 1.2,  1.3改动巨大，这些改动对加密通信协议的一般设计也有重要启发。
+
+TLS 1.3 的改动
 值得关注的重大改进有：
 
 *  0-RTT支持
@@ -2184,10 +2105,153 @@ tls 1.3的草案在 <http://tlswg.github.io/tls13-spec/>
 *  去除重协商
 *  去除静态RSA和DH密钥协商
 
+移动互联网兴起之后，rtt延迟变得更重要，可以看到，tls 1.3 的各项改进，主要就是针对移动互联网场景的。
+
+TLS 1.3 去掉了 ChangeCipherSpec ，这样record之上有3个协议：handshake，alert，application data
 
 
-http://blog.cryptographyengineering.com/2011/12/whats-tls-snap-start.html
+###1. record层的密码学保护的改动
+由于只保留了aead，所以不需要MAC key了。
 
+aead的具体参数用法也有调整，前文有。
+
+KDF 换成了标准的HKDF，有2种 tls_kdf_sha256, tls_kdf_sha384 
+
+###2.handshake协议的改动
+
+鉴于session ticket如此之好用，简直人见人爱，所以 TLS 1.3 直接把session ticket内置了，并改名叫 PSK
+
+要注意的是，此 PSK 和 tls 1.2中一个很生僻的psk(见 [rfc4279](https://tools.ietf.org/html/rfc4279) )并不是一回事。
+
+综合考虑了 session resuming ，session ticket后，
+TLS 1.3 提出了3种handshake模式：
+
+ 1.  Diffie-Hellman （ 包含 DH 和 ECDH 两种，下文说到 ECDH 的地方，请自行脑补成 "ECDH/DH"）.
+ 1.  A pre-shared symmetric key (PSK) ，预先共享的对称密钥，此处用统一的模型来处理session resuming 和 rfc4279的psk
+ 1.  A combination of a symmetric key and Diffie-Hellman ，前两者合体
+
+###3.1-RTT 握手
+
+首先，TLS 1.2 的握手有2个rtt，第一个rtt是 ClientHello/ServerHello，第二个rtt是ClientKeyExchange/ServerKeyExchange，
+之所以KeyExchange要放在第二个rtt，是由于tls1.2要支持多种密钥交换算法，和各种不同参数(比如 DH还是ECDH还是RSA，ECDHE用什么曲线，DH用什么群生成元，用什么模数，等等)，这些算法和参数都依赖第一个rtt去协商出来，
+TLS1.3大刀阔斧地砍掉了各种自定义DH群，砍掉了ECDH的自定义曲线，砍掉了RSA协商，密钥协商的算法只剩下不多几个，而且其实大家实际应用中基本都用 ECDH P-256，也没啥人用别的，所以干脆让客户端缓存服务器上一次用的是啥协商算法，把 KeyExchange直接和入第一个rtt，客户端在第一个rtt里直接就用缓存的这个算法发KeyExchange的公钥，如果服务器发现客户端发上来的算法不对，那么再告诉正确的，让客户端重试好了。
+这样，就引入了 HelloRetryRequest 这个消息。
+
+这样，基本没有副作用，就可以降到 1-RTT。
+这是TLS 1.3 的完整握手。
+
+ **显然，如果一个协议只有一种密钥协商算法，比如定死为 ECDH P-256，那一定可以做到 1-RTT**
+
+
+###4.  有副作用的 0-RTT握手
+
+0-RTT应该是受Google的QUIC协议的启发，
+如果服务器把自己的 ECDH 公钥长期缓存在客户端，那么客户端就可以用缓存里的ECDHE公钥，构造一个电子信封，在第一个RTT里，直接就发送应用层数据了。
+这个长期缓存在客户端的ECDH公钥，称为 半静态 ECDH 公钥（ semi-static (EC)DH share ）
+ECDH公钥通过 ServerConfiguration 消息发送给客户端。
+
+这个0-rtt优化是有副作用的：
+
+1. 0-RTT发送的应用数据没有前向安全性。
+1. 跨连接可以重放0-RTT里的应用数据（任何服务器端无共享状态的协议，都无法做到跨连接防重放）
+1. 如果服务器端 半静态 ECDH公钥对应的私钥泄露了，攻击者就可以伪装成客户端随意篡改数据了。
+
+
+服务器在 ServerConfiguration 消息里把半静态 ECDH 公钥发送给客户端。
+ServerConfiguration 值得关注一下：
+
+``` c
+      struct {
+          opaque configuration_id<1..2^16-1>;
+          uint32 expiration_date;
+          NamedGroup group;
+          opaque server_key<1..2^16-1>;
+          EarlyDataType early_data_type;
+          ConfigurationExtension extensions<0..2^16-1>;
+      } ServerConfiguration;
+```
+其中的 expiration_date 是本 ServerConfiguration 最后的有效期限。
+这个值绝对不允许大于7天。
+客户端绝对不允许存储 ServerConfiguration 大于7天，不管服务器怎么填这个值。
+
+0-RTT 中的应用数据，放在 EarlyDataIndication 中发送，
+
+TLS 1.3 还特意给 EarlyDataIndication  定义了一种 ContentType : early_handshake 
+（共四种 alert(21), handshake(22),      application_data(23), early_handshake(25) ）
+
+###5.  Resumption 和  PSK
+
+TLS 1.3 里面，把session resumption/session ticket 恢复出来的key，和 psk (rfc4279)， 统一在一个 handshake PSK 模式下处理。
+
+PSK CipherSuite可以 把PSK和ECDHE结合起来用，这样是有前向安全性的。
+也可以仅仅使用PSK，这样就没有前向安全性。
+
+
+###6. Key Schedule 过程的改动
+
+TLS 1.3 中，综合考虑的 session ticket的各种情况后，提出了 ES，SS 两个概念，统一处理密钥协商的各种情况。
+在各种handshake模式下，ES和SS的取值来源不同。
+
+Ephemeral Secret (ES)
+:  每个连接新鲜的 ECDHE 协商得出的值。凡是从 ES 得出的值，都是前向安全的（当然，在 PSK only模式下，不是前向安全的）。
+
+Static Secret (SS)
+:  从静态，或者半静态key得出的值。例如psk，或者服务器的半静态 ECDH 公钥。
+
+
+在各种 handshake 模式下：
+
+
+|    Key Exchange       |     Static Secret (SS) |    Ephemeral Secret (ES) |
+|    ------------       |     ------------------ |   ---------------------  |
+|(EC)DHE (完整握手)|Client ephemeral  w/ server ephemeral | Client ephemeral w/ server ephemeral|
+|(EC)DHE (w/ 0-RTT)|Client ephemeral w/ server static |Client ephemeral w/ server ephemeral |
+|    PSK                    |     Pre-Shared Key    |       Pre-shared key  |
+|    PSK + (EC)DHE          |     Pre-Shared Key    |    Client ephemeral  w/ server ephemeral |                                                
+如上表所示：
+
+1.  完整的 1-RTT握手的时候， SS 和 ES 都是用的 ephemeral key ，这样是一定有前向安全性的。
+1.  使用 0-RTT 的握手的时候，使用客户端的 ephemeral key 和 服务器端的半静态 ECDH 公钥生成 SS，
+1.  纯 PSK，这种场景完全没有前向安全性，应该避免。
+1.  PSK +　ECDHE，这种场景比较有意思，SS是用的Pre-Shared Key，没有前向安全性，ES 用的 ephemeral key，有前向安全性。
+
+可以看到，相比 TLS 1.2 的 session ticket，TLS 1.3 中 的 PSK + ECDHE，是结合了 ES 的，这样就有了前向安全性，相对更安全。
+
+
+和 TLS 1.2 不同的是，TLS 1.3的 master_secret 是使用 ES和SS 两个得出的。
+
+``` c
+  HKDF-Expand-Label(Secret, Label, HashValue, Length) =
+       HKDF-Expand(Secret, Label + '\0' + HashValue, Length)
+
+  1. xSS = HKDF(0, SS, "extractedSS", L)
+
+  2. xES = HKDF(0, ES, "extractedES", L)
+
+  3. master_secret = HKDF(xSS, xES, "master secret", L)
+
+  4. finished_secret = HKDF-Expand-Label(xSS,
+                                         "finished secret",
+                                         handshake_hash, L)
+
+```
+
+
+ Traffic Key Calculation
+ 
+ 加密流量用的key，在 TLS 1.3 里面称为 Traffic Key，由于多引入了一种ContentType，在不同的ContentType下，Traffic Key 并不相同。
+ 如下表：
+
+|  Record Type | Secret | Label     |                         Handshake Hash|
+|  ----------- | ------ | -----     |                       --------------- |
+|  Early data  |   xSS  | "early data key expansion"        |    ClientHello |
+|  Handshake   |  xES   | "handshake key expansion"         | ClientHello...      ServerKeyShare|
+|  Application | master secret | "application data key expansion"  |  All handshake messages but     Finished|
+
+要关注的是， Early Data 的 Traffic Key 是用 xSS 算出来的。也就是说，是用 Pre-Shared Key决定的。因此是没有前向安全性的。
+
+
+在一个TLS 连接中，究竟是用哪种 handshake 模式，是由 CipherSuite 协商决定的。
 
 
 #三. TLS协议的代码实现
@@ -2204,6 +2268,7 @@ TLS的主要实现：
 *  botan
 *  gnutls(gpl)
 *  cyassl
+*  go.crypto
 
 openssl 的 tls 协议实现有 6W 行，libressl 3.68W行， polarssl 1.29 W行， Botan 1.13 W行
 
@@ -2217,12 +2282,12 @@ boringssl
 Google’s OpenSSL fork by Adam Langley (@agl__)
 
 
-go.crypto
-
 https://github.com/sweis/crypto-might-not-suck
 
 
 #四. TLS协议的部署与优化
+
+这个方面网上的文章还是不少的，本文就简略一点。
 
 全站https时代正在到来!，
 移动互联网对人们生活的介入越来越深人，用户越来越多的隐私数据和支付数据通过网络传输，人们的隐私意识安全意识不断提高；运营商流量劫持，强行插入广告越来越引起反感。因此，各互联网大厂都开始切换到https。
@@ -2233,9 +2298,6 @@ https://github.com/sweis/crypto-might-not-suck
 <http://velocity.oreilly.com.cn/2015/index.php?func=session&id=8>
 
 国外：由Snowden爆料，美国人发现NSA在大范围深度地监听互联网; 还有openssl连续被爆多个严重安全漏洞。之后近2年，各种加密通信协议，软件，项目开始热门，各大厂商开始关注密码协议，做数据加密，信息安全。(openssl资助，pfs被重视，)
-
-
-这个方面网上的文章还是不少的，本文就简略一点。
 
 
 Google的性能数据：
@@ -2267,7 +2329,7 @@ http://op.baidu.com/2015/04/https-index/
 aws的配置
 http://docs.aws.amazon.com/ElasticLoadBalancing/latest/DeveloperGuide/elb-https-load-balancers.html
 
-可以参考byron之前给出的一个介绍nginx配置的文章 [Nginx下配置高性能，高安全性的https TLS服务][nginx_https_deploy]
+可以参考byron之前给出的一个介绍nginx配置的文章 [Nginx下配置高性能，高安全性的https TLS服务][nginx_https_deploy]，本人提供售后咨询服务，哈哈。
 
 
 CipherSuite配置(Mozilla的权威配置)
@@ -2284,13 +2346,16 @@ hardenedlinux的这个文档：SSL/TLS部署最佳实践v1.4:
 有个简单的解决办法：[小技巧:如何在wireshark里查看https的明文数据][wireshark_https_dump]
 
 
-私钥管理，可以使用：vault
-
 #五. 更多的加密通信协议case：QUIC，iMessage，TextSecure, otr,  ios HomeKit，libsodium
+
+时间有限，下面有些协议就没有做详细的分析了，读者自己去看吧。
 
 ###1. QUIC
 
 **QUIC =  TCP+TLS+SPDY**
+<https://www.chromium.org/quic>
+
+其中的 crypto design文档是本文关注的。
 
 <http://network.chinabyte.com/162/13361162.shtml>
 <http://blog.chromium.org/2015/04/a-quic-update-on-googles-experimental.html>
@@ -2303,14 +2368,14 @@ QUIC值得借鉴的地方有：crypto算法选择，0-RTT的实现方法，证�
 
 QUIC的crypto算法选择：
 密钥交换算法只有2种：
-```
+``` cpp
 // Key exchange methods
 const QuicTag kP256 = TAG('P', '2', '5', '6');   // ECDH, Curve P-256
 const QuicTag kC255 = TAG('C', '2', '5', '5');   // ECDH, Curve25519
 ```
 
 对称加密只使用AEAD，并且只有2种：
-```
+``` cpp
 // AEAD algorithms
 const QuicTag kNULL = TAG('N', 'U', 'L', 'N');   // null algorithm
 const QuicTag kAESG = TAG('A', 'E', 'S', 'G');   // AES128 + GCM-12
@@ -2318,13 +2383,11 @@ const QuicTag kCC12 = TAG('C', 'C', '1', '2');   // ChaCha20 + Poly1305
 ```
 
 证书类型2种，RSA证书， 和 RSA/ECDSA双证书
-```
+``` cpp
 // Proof types (i.e. certificate types)
 const QuicTag kX509 = TAG(‘X’, ‘5’, ‘0’, ‘9’);   // X.509 certificate, all key types
 const QuicTag kX59R = TAG(‘X’, ‘5’, ‘9’, ‘R’);   // X.509 certificate, RSA keys only
 ```
-
-
 
  handshake的结果是为了协商出来下面这些参数：
 
@@ -2374,6 +2437,9 @@ struct NET_EXPORT_PRIVATE QuicCryptoNegotiatedParameters {
 ```
 
 可以看到：QUIC内置支持sni
+而且区分 initial_premaster_secret 和 forward_secure_premaster_secret。
+
+先这样吧，后续再分析。
 
 
 
@@ -2388,13 +2454,11 @@ iMessage在注册时，给每个用户生成一对 RSA-1280 密钥用作非对�
 当要发送消息的时候，根据接收方的用户名，从IDS里面找到RSA公钥 和 APNS 地址。然后随机生成 128 比特密钥，用 AES-CTR-128 加密要发送的消息，用接收方的 RSA 1280 公钥，使用 OAEP 填充加密 128比特aes密钥。然后拼接 aes密文和rsa密文，对结果使用发送方的 ECDSA 私钥，用sha1算一次数字签名。 
 然后把aes密文，rsa密文，数字签名拼接起来，发给 APNS 投递给接收方。
 
-> Apple iMessage is a messaging service for iOS devices and Mac 
-> computers. > Apple iMessage is a messaging service for iOS devices and Mac
+如果要发送大文件，就生成一个key，用 aes-ctr-256 加密文件，并计算一个sha1，然后把key和sha1 放入消息里面发送。
+
+> Apple iMessage is a messaging service for iOS devices and Mac
 > computers. iMessage supports text and attachments such as photos,
-> contacts, and locations. Messages appear on all of a user’s registered
-> devices so that a conversation can be continued from any of the user’s
-> devices. iMessage makes extensive use of the Apple Push Notification
-> service (APNs). Apple does not log messages or attachments, and their
+> contacts, and locations.Apple does not log messages or attachments, and their
 > contents are protected by end-to-end encryption so no one but the
 > sender and receiver can access them. Apple cannot decrypt the data. 
 > ...
@@ -2406,50 +2470,26 @@ iMessage在注册时，给每个用户生成一对 RSA-1280 密钥用作非对�
 > (IDS), where they are associated with the user’s phone number or email
 > address, along with the device’s APNs address. 
 > ...  
->
-> As users enable additional devices for use with iMessage, their
-> encryption and signing public keys, APNs addresses, and associated
-> phone numbers are added to the directory service. Users can also add
-> more email addresses, which will be verified by sending a confirmation
-> link. Phone numbers are verified by the carrier network and SIM.
-> Further, all of the user’s registered devices display an alert message
-> when a new device, phone number, or email address is added.    How
-> iMessage sends and receives messages  Users start a new iMessage
-> conversation by entering an address or name. If they enter a phone
-> number or email address, the device contacts the IDS to retrieve the
-> public keys and APNs addresses for all of the devices associated with
-> the addressee. If the user enters a name, the device first utilizes 
-> the user’s Contacts app to
-> gather the phone numbers and email 
-> addresses associated with that
-> name, then gets the public keys and 
-> APNs addresses from the IDS. The
-> user’s outgoing message is 
-> individually encrypted for each of the
-> receiver’s devices. The public 
-> RSA encryption keys of the receiving
-> devices are retrieved from IDS. 
-> For each receiving device, the
-> sending device generates a random 
-> 128-bit key and encrypts the
-> message with it using AES in CTR mode. 
-> This per-message AES key is
-> encrypted using RSA-OAEP to the public key 
-> of the receiving device.
-> The combination of the encrypted message text 
-> and the encrypted
-> message key is then hashed with SHA-1, and the hash 
-> is signed with
-> ECDSA using the sending device’s private signing key. 
-> The resulting
-> messages, one for each receiving device, consist of the 
-> encrypted
-> message text, the encrypted message key, and the sender’s 
-> digital
-> signature. They are then dispatched to the APNs for delivery. 
-> Metadata, such as the timestamp and APNs routing information, is not 
-> encrypted. Communication with APNs is encrypted using a forwardsecret 
-> TLS channel.
+
+> Users start a new iMessage conversation by entering an address or name.
+If the user enters a name, the device first utilizes 
+ the user’s Contacts app to gather the phone numbers and email 
+ addresses associated with that name, then gets the public keys and 
+ APNs addresses from the IDS. The user’s outgoing message is 
+ individually encrypted for each of the receiver’s devices. The public 
+ RSA encryption keys of the receiving devices are retrieved from IDS. 
+ For each receiving device, the sending device generates a random 
+ 128-bit key and encrypts the message with it using AES in CTR mode. 
+ This per-message AES key is encrypted using RSA-OAEP to the public key 
+ of the receiving device. The combination of the encrypted message text 
+ and the encrypted message key is then hashed with SHA-1, and the hash 
+ is signed with ECDSA using the sending device’s private signing key. 
+ The resulting messages, one for each receiving device, consist of the 
+ encrypted message text, the encrypted message key, and the sender’s 
+ digital signature. They are then dispatched to the APNs for delivery. 
+ Metadata, such as the timestamp and APNs routing information, is not 
+ encrypted. Communication with APNs is encrypted using a forwardsecret 
+ TLS channel.
 >  
 > 
 >  APNs can only relay messages up to 4 KB or 16 KB in size, depending
@@ -2459,8 +2499,7 @@ iMessage在注册时，给每个用户生成一对 RSA-1280 密钥用作非对�
 > The AES key for the attachment, its URI (Uniform Resource Identifier),
 > and a SHA-1 hash of its encrypted form are then sent to the recipient
 > as the contents of an iMessage, with their confidentiality and
-> integrity protected through normal iMessage encryption, as shown
-> below.
+> integrity protected through normal iMessage encryption, 
 
 
 ###3. apple ios HomeKit
@@ -2475,30 +2514,31 @@ HomeKit 密码学安全机制的设计：
 随后使用Curve25519做密钥协商，生成共享key。
 
 >  HomeKit provides a home automation infrastructure that utilizes
-> iCloud and iOS security to protect and synchronize private data
-> without exposing it to Apple. HomeKit identity  HomeKit identity and
-> security are based on Ed25519 public-private key pairs. An Ed25519 key
-> pair is generated on the iOS device for each user for HomeKit, which
-> becomes his or her HomeKit identity. It is used to authenticate
-> communication between iOS devices, and between iOS devices and
-> accessories.  The keys are stored in Keychain and are included only in
-> encrypted Keychain backups. The keys are synchronized between devices
-> using iCloud Keychain.    Communication with HomeKit accessories
-> HomeKit accessories generate their own Ed25519 key pair for use in
-> communicating with iOS devices. If the accessory is restored to
-> factory settings, a new key pair is generated.  To establish a
-> relationship between an iOS device and a HomeKit accessory, keys are
-> exchanged using Secure Remote Password (3072-bit) protocol, utilizing
-> an 8-digit code provided by the accessory’s manufacturer and entered
-> on the iOS device by the user, and then encrypted using
-> ChaCha20-Poly1305 AEAD with HKDF-SHA-512-derived keys. The accessory’s
-> MFi certification is also verified during setup.  When the iOS device
-> and the HomeKit accessory communicate during use, each authenticates
-> the other utilizing the keys exchanged in the above process. Each
-> session is established using the Station-to-Station protocol and is
-> encrypted with HKDF-SHA-512 derived keys based on per-session
-> Curve25519 keys. This applies to both IP-based and Bluetooth Low
-> Energy accessories.
+ iCloud and iOS security to protect and synchronize private data
+ without exposing it to Apple.  
+ ...
+ HomeKit identity and
+ security are based on Ed25519 public-private key pairs. An Ed25519 key
+ pair is generated on the iOS device for each user for HomeKit, which
+ becomes his or her HomeKit identity. It is used to authenticate
+ communication between iOS devices, and between iOS devices and
+ accessories.  
+ ...    
+ Communication with HomeKit accessories
+ HomeKit accessories generate their own Ed25519 key pair for use in
+ communicating with iOS devices. 
+ To establish a  relationship between an iOS device and a HomeKit accessory, keys are
+ exchanged using Secure Remote Password (3072-bit) protocol, utilizing
+ an 8-digit code provided by the accessory’s manufacturer and entered
+ on the iOS device by the user, and then encrypted using
+ ChaCha20-Poly1305 AEAD with HKDF-SHA-512-derived keys. The accessory’s
+ MFi certification is also verified during setup.  When the iOS device
+ and the HomeKit accessory communicate during use, each authenticates
+ the other utilizing the keys exchanged in the above process. Each
+ session is established using the Station-to-Station protocol and is
+ encrypted with HKDF-SHA-512 derived keys based on per-session
+ Curve25519 keys. This applies to both IP-based and Bluetooth Low
+ Energy accessories.
 
 ###4. TextSecure
 TextSecure是一个端到端im加密通信协议，由WhisperSystem公司设计，目前whatsapp和WhisperSystem公司有合作，看网上资料，2014年11月开始，whatsapp已经开始使用TextSecure协议来做端到端加密(消息来源:  <https://whispersystems.org/blog/whatsapp/>
@@ -2530,7 +2570,8 @@ asymmetric signatures: RSA-4096 with PSS(SHA-512) padding
 
 ###6.  libsodium/NaCL
 
-libsodium/NaCL 值得重点介绍，大力推广 
+libsodium/NaCL 值得重点介绍，大力推广 。
+新的没有兼容包袱的系统，都值得考虑用 NaCL来代替 openssl。
 libsodium是对NaCL的封装，NaCL大有来头，作者 DJB 是密码学领域的权威人物，chacha20，Curve25519 的作者 。 
 没有历史包袱的项目，强烈建议使用 libsodium/NaCL。
 
@@ -2626,66 +2667,223 @@ ECDHE就是比较典型的ECDHE了，和TLS用法一样：双方都持有一对�
 
 设计决策点：
 
-1.  四类算法如何选择？
-12.  考虑将来的算法调整，要加版本号机制吗？
-12.  RSA用作密钥交换是一个好的选择吗？考虑PFS
-13.  签名算法如何选择？RSA or ECDSA or Ed25519？
-14.  自建PKI，是个好的选择吗？crl如何解决？
-15.  对称加密算法+认证算法，如何选择？或者直接用aead？
-16.  必须用糟糕的openssl吗？or something better？crypto++,botan, nacl/libsodium, polarssl？libsodium: ed25519+curve2519+chacha20+poly1305
-17.  重放攻击如何解决？某种seq？或者nonce如何生成？
+1.  四类基础算法 加密/MAC/签名/密钥交换 如何选择？
+  对称加密目前毫无疑问应该直接用aead，最佳选择就是 aes-128-gcm/aes-256-gcm/chacha20-poly1305了
+  数字签名/验证方案，如果是移动互联网，应该考虑直接放弃 RSA，考虑 P-256 的 ECDSA 公钥证书，或者更进一步的 ed25519 公钥证书。
+  密钥交换算法，目前最佳选择就是 curve25519，或者 P-256。
+
+1.  对称加密算法+认证算法，如何选择？或者直接用aead？
+  
+1.  签名算法如何选择？RSA or ECDSA or Ed25519？
+
+1.  考虑将来的算法调整，要加版本号机制吗？
+    建议是加上，起码在密钥协商的步骤，要加上版本号。便于将来更新算法。
+
+1.  RSA用作密钥交换是一个好的选择吗？考虑PFS
+    建议直接放弃RSA，RSA服务器端性能比ECDSA更差，签名更大费流量，而且没有前向安全性，给私钥保管带来更大风险。
+
+1.  自建PKI，是个好的选择吗？crl如何解决？
+    自建PKI可以做到更安全，比如简单的客户端内置数字签名公钥。可是当需要紧急吊销一个证书的时候，只能通过紧急发布新版客户端来解决。
+
+1.  必须用糟糕的openssl吗？or something better？crypto++,botan, nacl/libsodium, polarssl？libsodium: ed25519+curve2519+chacha20+poly1305
+
+1.  重放攻击如何解决？某种seq？或者nonce如何生成？
+
 1.  握手过程被中间人篡改的问题怎么解决？
-18.  性能：公钥运算的cpu消耗可以承受吗？加上某种cache？
-19.  延迟：密钥协商需要几个rtt？最少多少？加上cache后？和tcp对比如何
-10.  TLS的性能(主要指服务器cpu消耗)还有空间可以压榨吗？我能设计一个性能更牛逼的吗？
 
-> CurveCP的安全考量：
-Confidentiality and integrity
-server authentication?
-client authentication?
-replay attacks?
-man-in-the-middle attacks?
-passive forward secrecy?
-active forward secrecy?
-against traffic analysis? internet destination, exact timing, and approximate length of each packet that you send. 
+1.  性能：私钥运算的cpu消耗可以承受吗？加上某种cache？
+    要解决私钥运算的高cpu消耗，必然就需要 session ticket/session id 这种cache机制。显然session ticket 更好
 
-> Availability availability, i.e., to make denial-of-service attacks more difficult.
-Blind amplification
-Unauthenticated memory consumption
-CPU consumption
+1.  延迟：密钥协商需要几个rtt？最少多少？加上cache后？和tcp对比如何
 
-> Efficiency
-CPU overhead
-Network overhead without packet loss
-Latency without packet loss
-
-> Decongestion
+1.  TLS的性能(主要指服务器cpu消耗)还有空间可以压榨吗？我能设计一个性能更牛逼的吗？
 
 
 #七. 附录：密码学基础概念
 
-本文已经很长了，本来预计读者会自己去查资料。
-但想了下，估计大多数读者没有好奇心，也懒得去查资料，英文也很差，所以还是在这里介绍一下。
+本文已经很长了，基础概念的内容更多，再展开介绍就太长了，下面就列一下点，贴一下参考资料，就先这样,以后再说吧。
 
+当然，最好的资料是下面列的书。
 
 ##1. 块加密算法 block cipher
-    : AES, Serpent, 等
+
+ AES 等
+
+《AES后分组密码的研究现状 及发展趋势》
+http://www.ccf.org.cn/resources/1190201776262/2010/04/15/019026.pdf
+
+
+aead的介绍（作者是大神）
+https://www.imperialviolet.org/2015/05/16/aeads.html
+
+
+3种组合方式之争
+http://www.thoughtcrime.org/blog/the-cryptographic-doom-principle/
+
+CBC模式+MAC-then-encrypt的padding oracle 攻击, tls POODLE 漏洞
+http://drops.wooyun.org/papers/3194
+https://defuse.ca/blog/recovering-cbc-mode-iv-chosen-ciphertext.html
+
+
+
+128 bit 和 256 bit key size之争
+https://www.schneier.com/blog/archives/2009/07/another_new_aes.html
+
+
+nist 对 aes gcm 的技术标准，官方权威文档：
+http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf
+
+一个gcm的调用范例
+https://github.com/facebook/conceal/blob/master/native/crypto/gcm_util.c
+
+DES
+1天之内破解DES（2008年）
+http://www.sciengines.com/company/news-a-events/74-des-in-1-day.html
+
+
+iPhone 5S开始，A7芯片也有了aes硬件指令 (ARMv8 指令集)，有825%的性能提升：
+http://www.anandtech.com/show/7335/the-iphone-5s-review/4
+
+
 ##2. 流加密算法 stream cipher
-    : RC4，ChaCha20 等
-##2. Hash函数 hash funtion
-    :MD5，sha1，sha256，sha512 , ripemd 160，poly1305 等
-##3. 消息验证码函数 message authentication code
-    : HMAC-sha256，AEAD 等
-##4. 密钥交换 key exchange
-    : DH，ECDH，RSA，PFS方式的（DHE，ECDHE）等
-##5. 公钥加密 public-key encryption
-    : RSA，rabin-williams 等
-##6. 数字签名算法 signature algorithm
-    :RSA，DSA，ECDSA (secp256r1 , ed25519) 等
-##7. 密码衍生函数 key derivation function
-    : TLS-12-PRF(SHA-256) , bcrypto，scrypto，pbkdf2 等
-##8. 随机数生成器 random number generators
-    :  /dev/urandom 等
+ RC4，ChaCha20 等
+
+ 序列密码发展现状 
+http://www.ccf.org.cn/resources/1190201776262/2010/04/15/019018.pdf
+
+rc4 : http://www.rc4nomore.com/
+
+[RC4加密已不再安全，破解效率极高（含视频）]  http://www.freebuf.com/news/72622.html
+
+
+
+
+##3. Hash函数 hash funtion
+  MD5，sha1，sha256，sha512 , ripemd 160，poly1305 等
+
+MD5被碰撞:
+http://natmchugh.blogspot.com/2014/10/how-i-created-two-images-with-same-md5.html
+
+http://blog.avira.com/md5-the-broken-algorithm/
+
+
+##4. 消息验证码函数 message authentication code
+  HMAC-sha256，AEAD 等
+
+为什么要用MAC
+http://www.happybearsoftware.com/you-are-dangerously-bad-at-cryptography.html
+
+Flickr的漏洞案例：
+http://netifera.com/research/flickr_api_signature_forgery.pdf
+
+http://www.ietf.org/rfc/rfc2104.txt
+
+
+
+##5. 密钥交换 key exchange
+ DH，ECDH，RSA，PFS方式的（DHE，ECDHE）等
+
+https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/
+
+
+关于 前向安全性( Perfect Forward Secrecy )
+http://vincent.bernat.im/en/blog/2011-ssl-perfect-forward-secrecy.html
+
+
+http://www.cryptopp.com/wiki/Elliptic_Curve_Cryptography
+
+google对openssl里面的椭圆曲线的优化：
+http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/37376.pdf
+
+
+
+http://www.math.brown.edu/~jhs/Presentations/WyomingEllipticCurve.pdf
+
+ripple从nistp256k1曲线迁移到ed25519
+https://ripple.com/uncategorized/curves-with-a-twist/
+
+openssh 6.5 开始支持 ed25519, curve25519, chacha20-poly1305
+http://www.openssh.org/txt/release-6.5
+
+
+
+
+
+##6. 公钥加密 public-key encryption
+ RSA，rabin-williams 等
+
+
+RSA入门必读（斯坦福，普渡的课件）：
+http://crypto.stanford.edu/~dabo/courses/cs255_winter07/rsa.ppt
+https://engineering.purdue.edu/kak/compsec/NewLectures/Lecture12.pdf
+
+PKCS1 标准，应用RSA必读：
+https://www.ietf.org/rfc/rfc3447
+
+
+RSA 的公钥为什么比AES的key长？
+http://crypto.stackexchange.com/questions/8687/security-strength-of-rsa-in-relation-with-the-modulus-size
+
+
+http://cryptofails.blogspot.ca/2013/07/saltstack-rsa-e-d-1.html
+
+使用什么padding？ OAEP，为什么不要用PKCS V1.5
+
+http://stackoverflow.com/questions/2991603/pkcs1-v2-0-encryption-is-usually-called-oaep-encryption-where-can-i-confirm-i
+
+http://crypto.stackexchange.com/questions/12688/can-you-explain-bleichenbachers-cca-attack-on-pkcs1-v1-5
+http://en.wikipedia.org/wiki/Adaptive_chosen-ciphertext_attack
+
+
+PKCS #1 -- #15标准协议官方网站：
+http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/public-key-cryptography-standards.htm
+http://arxiv.org/pdf/1207.5446v1.pdf
+
+
+
+blinding 一种实现上的技术，用来解决 timing 侧通道攻击的问题
+https://en.wikipedia.org/wiki/Blinding_(cryptography)
+http://crypto.stanford.edu/~dabo/papers/ssl-timing.pdf
+
+
+
+Twenty Years of Attacks on the RSA Cryptosystem:
+http://crypto.stanford.edu/~dabo/papers/RSA-survey.pdf
+
+
+ 电子信封(digital envelope)
+http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/what-is-a-digital-envelope.htm
+
+在openssl的evp接口中有直接支持：
+https://wiki.openssl.org/index.php/EVP_Asymmetric_Encryption_and_Decryption_of_an_Envelope
+
+
+
+
+
+
+##7. 数字签名算法 signature algorithm
+RSA，DSA，ECDSA (secp256r1 , ed25519) 等
+
+
+三大公钥体制：RSA，DSA，ECDSA
+RSA目前是主流，占据绝大多数市场份额
+DSA已经被废弃
+ECDSA是未来的趋势，例如bitcoin就用ECDSA
+https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet/
+https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/
+
+
+
+
+##8. 密码衍生函数 key derivation function
+ TLS-12-PRF(SHA-256) , bcrypto，scrypto，pbkdf2 等
+
+hkdf：        http://tools.ietf.org/html/rfc5869
+https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/
+
+##9. 随机数生成器 random number generators
+  /dev/urandom 等
 
 
 [现代密码学实践指南[2015年]][modern_crypto]
@@ -2798,6 +2996,7 @@ Latency without packet loss
   [tls_certificate_x509_example]:  //dn-windydays.qbox.me/tls_certificate_x509_example.png
   [pay_me_ad]:  //dn-windydays.qbox.me/pay_me_ad.jpg
   [pay_me]:  //dn-windydays.qbox.me/pay_me.jpg
+  [webtrust_logo]: https://www.geotrust.com/assets/images/CA-Webtrust-KPMG.gif
 
 
 [nginx_https_deploy]: http://km.oa.com/group/906/articles/show/225321
@@ -2806,10 +3005,11 @@ Latency without packet loss
 [modern_crypto]: http://km.oa.com/group/24938/articles/show/228445
 
 
-<embed src="http://music.163.com/style/swf/widget.swf?sid=4236464&type=2&auto=1&width=320&height=66" width="340" height="86"  allowNetworking="all"></embed>
+<embed src="//music.163.com/style/swf/widget.swf?sid=4236464&type=2&auto=1&width=320&height=66" width="340" height="86"  allowNetworking="all"></embed>
 
 ![][pay_me_ad]
 ![][pay_me]
 
 ----------
+
 
