@@ -22,8 +22,8 @@ CN = RiYueShenJiao Certification Authority
 basicConstraints        = CA:true
 subjectKeyIdentifier    = hash
 keyUsage                = keyCertSign,cRLSign
-crlDistributionPoints=URI:http://pki.tiandihui.com/GIAG2.crl
-authorityInfoAccess = caIssuers;URI:http://pki.tiandihui.com/GIAG2.crt, OCSP;URI:http://ocsp.tiandihui.com/ocsp
+crlDistributionPoints=URI:http://pki.riyueshenjiao.com/GIAG2.crl
+authorityInfoAccess = caIssuers;URI:http://pki.riyueshenjiao.com/GIAG2.crt, OCSP;URI:http://ocsp.riyueshenjiao.com/ocsp
 ">ca_v3.ext.conf
 
 
@@ -50,8 +50,8 @@ basicConstraints = CA:FALSE
 keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage  = serverAuth, clientAuth
 authorityKeyIdentifier=keyid,issuer
-crlDistributionPoints=URI:http://pki.tiandihui.com/GIAG2.crl
-authorityInfoAccess = caIssuers;URI:http://pki.tiandihui.com/GIAG2.crt, OCSP;URI:http://ocsp.tiandihui.com/ocsp
+crlDistributionPoints=URI:http://pki.riyueshenjiao.com/GIAG2.crl
+authorityInfoAccess = caIssuers;URI:http://pki.riyueshenjiao.com/GIAG2.crt, OCSP;URI:http://ocsp.riyueshenjiao.com/ocsp
 subjectAltName=@alt_names
 
 [alt_names]
@@ -102,3 +102,5 @@ sudo update-ca-trust extract
 
 echo "CAfile:" $ca_bundle "cert: " dongfangbubai_*.crt
 openssl verify -verbose  -CAfile $ca_bundle dongfangbubai_*.crt 
+
+keytool -printcert -v  -file /etc/pki/tls/certs/ca-bundle.crt
