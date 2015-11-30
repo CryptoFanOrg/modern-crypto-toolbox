@@ -82,37 +82,23 @@ done
 done
 
 
-ca_bundle=/etc/pki/tls/certs/ca-bundle.crt
-
 for ca in 1 2 3;
 do 
     for k in 1 2;
     do
-        printf "\n\nCAfile: riyueshenjiao_root_ca_$ca.crt cert: dongfangbubai_${k}_by_CA_${ca}.crt\n"
+        printf "\nCAfile: riyueshenjiao_root_ca_$ca.crt cert: dongfangbubai_${k}_by_CA_${ca}.crt\n"
         openssl verify -verbose  -CAfile riyueshenjiao_root_ca_$ca.crt dongfangbubai_${k}_by_CA_${ca}.crt 
     done
 done
 
 
-
-for ca in 1 2 3;
-do 
-    for k in 1 2;
-    do
-        printf "\n\nCAfile: $ca_bundle cert: dongfangbubai_${k}_by_CA_${ca}.crt\n"
-        openssl verify -verbose  -CAfile $ca_bundle dongfangbubai_1_by_CA_1.crt 
-    done
-done
+ca_bundle=/etc/pki/tls/certs/ca-bundle.crt
+echo "CAfile:" $ca_bundle "cert: " dongfangbubai_*.crt
+openssl verify -verbose  -CAfile $ca_bundle dongfangbubai_*.crt 
 
 sudo update-ca-trust enable
 sudo cp riyueshenjiao_root_ca_*.crt /etc/pki/ca-trust/source/anchors/
 sudo update-ca-trust extract
 
-for ca in 1 2 3;
-do 
-    for k in 1 2;
-    do
-        printf "\n\nCAfile: $ca_bundle cert: dongfangbubai_${k}_by_CA_${ca}.crt\n"
-        openssl verify -verbose  -CAfile $ca_bundle dongfangbubai_1_by_CA_1.crt 
-    done
-done
+echo "CAfile:" $ca_bundle "cert: " dongfangbubai_*.crt
+openssl verify -verbose  -CAfile $ca_bundle dongfangbubai_*.crt 
