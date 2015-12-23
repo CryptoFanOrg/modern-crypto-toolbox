@@ -114,6 +114,7 @@ namespace crypto_tools{
             int getAppDataToConsume(string & buff);
 
         private:
+            int state;//hancshake-->read/write-->close_notify-->closed
             BIO * bio_on_string;
 
 
